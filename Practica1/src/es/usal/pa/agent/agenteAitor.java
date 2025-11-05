@@ -45,6 +45,7 @@ public class agenteAitor extends Agent {
 		private static final long serialVersionUID = 1L;
 		private boolean finished = false;
 
+        @Override
 		public void action() {
 
 		    // Se envía mensaje a los jugadores con el valor actual
