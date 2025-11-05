@@ -115,8 +115,7 @@ public class expertoDavid extends Agent {
             // 7. Buscar ganador(es)
             List<String> ganadores = new ArrayList<>();
 
-            for (String r : resultados)
-                ganadores.add(r);
+            ganadores.addAll(resultados);
 
             // 8. Enviar ganadores a todos y Aitor
             if (ganadores.isEmpty()) {
