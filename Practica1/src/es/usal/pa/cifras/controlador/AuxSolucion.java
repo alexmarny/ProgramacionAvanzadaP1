@@ -78,7 +78,7 @@ public class AuxSolucion
 	{
 		Integer temp=null;
 		for(int i=0;i<lista.size();i++)
-			if(temp==null || Math.abs(resultadoBuscado-lista.get(i))<Math.abs(temp-lista.get(i)))
+			if(temp==null || Math.abs(resultadoBuscado-lista.get(i))<Math.abs(resultadoBuscado-temp))
 				temp=lista.get(i);
 		
 		return temp;
