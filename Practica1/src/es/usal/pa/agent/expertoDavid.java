@@ -122,6 +122,7 @@ public class expertoDavid extends Agent {
             if (ganadores.isEmpty()) {
                 ACLMessage noWinner = new ACLMessage(ACLMessage.INFORM);
                 noWinner.setContent("DAVID_SIN_GANADORES");
+                noWinner.setConversationId("GANADORES");
                 noWinner.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
                 for (String j : jugadores) noWinner.addReceiver(new AID(j, AID.ISLOCALNAME));
                 send(noWinner);
@@ -130,6 +131,7 @@ public class expertoDavid extends Agent {
                 for (String g : ganadores) {
                     ACLMessage winner = new ACLMessage(ACLMessage.INFORM);
                     winner.setContent("DAVID_GANADOR_" + g);
+                    winner.setConversationId("GANADORES");
                     winner.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
                     for (String j : jugadores) winner.addReceiver(new AID(j, AID.ISLOCALNAME));
                     send(winner);

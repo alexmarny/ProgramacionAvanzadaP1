@@ -1,0 +1,6 @@
+# Compiled class files
+*.class
+Practica1/bin/
+
+# Eclipse project files
+.settings/
