@@ -45,7 +45,6 @@ public class agenteAitor extends Agent {
 		private static final long serialVersionUID = 1L;
 		private boolean finished = false;
 
-        @Override
 		public void action() {
 
 		    // Se envía mensaje a los jugadores con el valor actual
@@ -61,7 +60,7 @@ public class agenteAitor extends Agent {
 		    if (counter == 0) {
 		        // Cuando llega a 0, avisamos al experto y jugadores
 		        ACLMessage inicio = new ACLMessage(ACLMessage.INFORM);
-		        inicio.setContent("AITOR_INICIO_RONDA");
+		        inicio.setContent("AITOR_TIEMPO_JUGADORES");
 		        inicio.addReceiver(new AID("David", AID.ISLOCALNAME));
 		        for (String jugador : jugadores) {
 		            inicio.addReceiver(new AID(jugador, AID.ISLOCALNAME));
