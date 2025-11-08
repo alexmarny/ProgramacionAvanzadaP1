@@ -71,6 +71,10 @@ public class expertoDavid extends Agent {
 
             // 1. Números disponibles (puedes cambiarlos)
             int[] numeros = {1, 3, 5, 25, 50, 75};
+			/*Generación aleatoria de números con sus respectivos resultados con la ayuda de la clase AuxOperacion
+            * List<Integer> numeros=new ArrayList<Integer>();
+            * numeros = AuxProblema.calcularListaNumeros (6);
+            */
 
             for (int n : numeros) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -83,6 +87,9 @@ public class expertoDavid extends Agent {
 
             // 2. Enviar número objetivo
             int objetivo = 347; // puedes randomizar si quieres
+			/* Generación número objetivo con la clase AuxProblema
+             * int objetivo = AuxProblema.calcularResultado(20, 800);
+             */
             ACLMessage obj = new ACLMessage(ACLMessage.INFORM);
             obj.setContent("DAVID_VALOR_BUSCADO_" + objetivo);
             for (String j : jugadores) obj.addReceiver(new AID(j, AID.ISLOCALNAME));
@@ -141,3 +148,4 @@ public class expertoDavid extends Agent {
         }
     }
 }
+
