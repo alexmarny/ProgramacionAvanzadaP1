@@ -86,7 +86,7 @@ public class AgenteJugador extends Agent {
             if (msg != null) {
                 String contenido = msg.getContent();
 
-                if (contenido.startsWith("DAVID_NUMERO_JUGADORES_")) {
+                if (contenido.startsWith("DAVID_NUMERO_JUGADORES_")) { //este mensaje está bien?
                     String valor = contenido.substring(contenido.lastIndexOf("_") + 1);
                     try {
                         int numero = Integer.parseInt(valor);
@@ -177,6 +177,8 @@ public class AgenteJugador extends Agent {
             FutureTask<Solucion> task = new FutureTask<Solucion> (callableSolucionTeclado);
             ExecutorService executorService = Executors.newSingleThreadExecutor ();
             executorService.submit(task);
+            ACLMessage solMsg = new ACLMessage(ACLMessage.INFORM);
+		    
             
             Solucion solucion=null;
             try
@@ -187,6 +189,10 @@ public class AgenteJugador extends Agent {
                 //cuando no salta el timeout
                 System.out.println("Solución registrada");
                 System.out.println(AuxSolucion.cadenaOperaciones(solucion));
+                solMsg.setContent("JUGADOR_SOLUCION_DAVID" + solucion);
+		        solMsg.addReceiver(new AID("David", AID.ISLOCALNAME));
+                send(solMsg);
+
                 
             } catch (InterruptedException e)
             {
@@ -207,7 +213,7 @@ public class AgenteJugador extends Agent {
                 task.cancel(true);
             }
             
-            
+            //implementar que cierre cuando se reciba el mensaje de "DAVID_FINALIZAR_CIFRAS"
             executorService.shutdown();
             try
             {
@@ -232,9 +238,62 @@ public class AgenteJugador extends Agent {
                 
                 System.out.println("Solución timeout");
                 System.out.println(AuxSolucion.cadenaOperaciones(solucion));
+                solMsg.setContent("JUGADOR_SOLUCION_DAVID" + solucion);
+		        solMsg.addReceiver(new AID("David", AID.ISLOCALNAME));
+                send(solMsg);
             }
-	}
+            // myAgent.addBehaviour(new SiguienteComportamiento());
+	    }
+    }
+
+    private class EsperarGanadoresDavid extends CyclicBehaviour {
+
+        @Override
+        public void action() {
+            ACLMessage msg = myAgent.receive();
+            if (msg != null) {
+            	String contenido = msg.getContent();
+                if (contenido.equals("DAVID_SIN_GANADORES")) {
+                    System.out.println("No ha habido ganadores en esta partida.");
+                } else if (contenido.startsWith()){
+                    String ganador = contenido.substring(contenido.lastIndexOf("_") + 1);
+                    System.out.println("Ganador de la partida:" + ganador);
+                } else { block ();}
+                // myAgent.addBehaviour(new SiguienteComportamiento());
+            }
         }
+    }
+
+    private class RecibirGanadores extends Behaviour {
+
+        @Override
+        public void action() {
+            ACLMessage msg = myAgent.receive();
+            System.out.println("Ganador/es de la partida:");
+
+            do {
+                msg = myAgent.receive();
+                String contenido = msg.getContent();
+                if(contenido.startsWith("DAVID_GANADOR_")){
+                    String ganador = contenido.substring(contenido.lastIndexOf("_") + 1);
+                    System.out.println(ganador);
+                }
+
+            }while (msg != null)
+        }
+
+		@Override
+		public boolean done() {return done;} //no entiendo muy bien qué hay que poner aquí
+		
+        @Override
+		public int onEnd() {
+            System.out.println(getLocalName() + " -> Se recibieron los ganadores.");
+            // myAgent.addBehaviour(new SiguienteComportamiento());
+            return 0;
+        }
+    }
+
+
     }
 
    
