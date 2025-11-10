@@ -1,8 +1,17 @@
 package es.usal.pa.agent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import es.usal.pa.cifras.controlador.AuxSolucion;
 import es.usal.pa.cifras.controlador.CallableSolucionTeclado;
+import es.usal.pa.cifras.modelo.Solucion;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
@@ -164,60 +173,71 @@ public class AgenteJugador extends Agent {
 
         @Override
         public void action(){
-            CallableSolucionTeclado solucionJugador = new CallableSolucionTeclado(numeros, objetivo);
-            //comprobar interrupcion por tiempo
-            ACLMessage solucion = new ACLMessage(ACLMessage.INFORM);
-            solucion.setContent("JUGADOR_SOLUCION_DAVID" + solucionJugador);
-            solucion.addReceiver(new AID("David", AID.ISLOCALNAME));
-            send(solucion);    
-
-            ACLMessage msg = myAgent.receive();
-            if(msg != null){
-                String contenido = msg.getContent();
-                if (!contenido.startsWith("DAVID_FINALIZAR_CIFRAS")){
-                    CallableSolucionTeclado solucionJugador = new CallableSolucionTeclado(numeros, objetivo);
-                    //comprobar interrupcion por tiempo
-                    ACLMessage solucion = new ACLMessage(ACLMessage.INFORM);
-                    solucion.setContent("JUGADOR_SOLUCION_DAVID" + solucionJugador);
-                    solucion.addReceiver(new AID("David", AID.ISLOCALNAME));
-                    send(solucion);
-
-
-
-
-                    // myAgent.addBehaviour(new SiguienteComportamiento());
-                }else {block ();}
+            CallableSolucionTeclado callableSolucionTeclado=new CallableSolucionTeclado(numeros, objetivo);
+            FutureTask<Solucion> task = new FutureTask<Solucion> (callableSolucionTeclado);
+            ExecutorService executorService = Executors.newSingleThreadExecutor ();
+            executorService.submit(task);
+            
+            Solucion solucion=null;
+            try
+            {
+                //dejo como máximo 45 segundos para introducir operaciones
+                solucion = task.get(45, TimeUnit.SECONDS);
+                
+                //cuando no salta el timeout
+                System.out.println("Solución registrada");
+                System.out.println(AuxSolucion.cadenaOperaciones(solucion));
+                
+            } catch (InterruptedException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ExecutionException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (TimeoutException e)
+            {
+                // TODO Auto-generated catch block
+                //e.printStackTrace();
+                
+                //https://www.geekyhacker.com/callable-with-the-timeout-in-java-executorservice/
+                //añadir comprobación en el hilo para salirse
+                //if(Thread.currentThread().isInterrupted()) return;
+                task.cancel(true);
             }
+            
+            
+            executorService.shutdown();
+            try
+            {
+                executorService.awaitTermination(500, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            
+            if(!executorService.isTerminated())
+                executorService.shutdownNow();		
+            
+            if(!executorService.isShutdown())
+                executorService.shutdownNow();
+            
+            
+            //cuando salta el timeout me quedo por donde iba
+            if(task.isCancelled())
+            {
+                solucion=callableSolucionTeclado.getMejorResultadoCalculado();
+                
+                System.out.println("Solución timeout");
+                System.out.println(AuxSolucion.cadenaOperaciones(solucion));
+            }
+	}
         }
     }
 
-    private class RondaCifras extends Behaviour {
-
-        private boolean done = false;
-
-        @Override
-        public void action() {
-            ACLMessage msg = myAgent.receive();
-            if (msg != null) {
-                if (msg.getContent().startsWith("DAVID_FINALIZAR_CIFRAS")) {
-                    objetivo = Integer.parseInt(msg.getContent().substring(msg.getContent().lastIndexOf("_") + 1));
-                    System.out.println(getLocalName() + " -> Objetivo recibido: " + objetivo);
-                    done = true;
-                }
-            } else block();
-        }
-
-        @Override
-        public boolean done() { return done; }
-
-        @Override
-        public int onEnd() {
-            System.out.println(getLocalName() + " -> Esperando inicio de ronda...");
-            myAgent.addBehaviour(new EsperarInicioDeRonda());
-            return 0;
-        }
-    }
-
+   
 
 
     }
