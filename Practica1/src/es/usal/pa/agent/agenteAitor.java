@@ -90,10 +90,16 @@ public class agenteAitor extends Agent {
             if (mensaje != null) {
                 System.out.println("Ganadores recibidos desde David: " + mensaje.getContent());
                 // Reiniciar cuenta atrás
+<<<<<<< Updated upstream
                 addBehaviour(new CuentaAtrasBehaviour(myAgent, 1000));
+=======
+                counter = 15;
+                addBehaviour(new CuentaAtrasBehaviour(myAgent, 1000)); // reinicia la cuenta atrás
+>>>>>>> Stashed changes
             } else {
                 block();
             }
         }
     }
+
 }
