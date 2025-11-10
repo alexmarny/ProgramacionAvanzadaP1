@@ -142,6 +142,11 @@ public class AgenteJugador extends Agent {
         public boolean done() { return done; }
     }
 
-}
-
-
+        @Override
+        public int onEnd() {
+            // TODO: Replace with the actual next behavior for the game logic
+            // myAgent.addBehaviour(new SiguienteComportamiento());
+            System.out.println(getLocalName() + " -> EsperarInicioDeRonda finalizado. (Falta añadir el siguiente comportamiento)");
+            return 0;
+        }
+    }
