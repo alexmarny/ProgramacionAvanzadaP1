@@ -84,7 +84,7 @@ public class expertoDavid extends Agent {
             // 2. Enviar número objetivo
             int objetivo = 347;
             ACLMessage obj = new ACLMessage(ACLMessage.INFORM);
-            obj.setContent("DAVID_VALOR_BUSCADO_" + objetivo);
+            obj.setContent("DAVID_VALOR_BUSCADO_JUGADORES_" + objetivo);
             for (String j : jugadores) obj.addReceiver(new AID(j, AID.ISLOCALNAME));
             send(obj);
 
