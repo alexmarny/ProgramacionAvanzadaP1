@@ -150,4 +150,34 @@ public class AgenteJugador extends Agent {
             System.out.println(getLocalName() + " -> EsperarInicioDeRonda finalizado. (Falta añadir el siguiente comportamiento)");
             return 0;
         }
+
+        //hilar los comportamientos
+    
+
+    private class MostrarNumeros extends CyclicBehaviour {
+
+        @Override
+        public void action(){
+            ACLMessage msg = myAgent.receive();
+                if(msg != null){
+                    String contenido = msg.getContent();
+                    if (contenido.startsWith("DAVID_NUMERO_")){
+                        String numero = contenido.substring(contenido.lastIndexOf("_") + 1);
+                        System.out.println(getLocalName() + numero); //Convendría añadir un mensaje de "estos son los numeros" pero no sé cómo
+                    }else if (contenido.startsWith("DAVID_VALOR_BUSCADO_JUGADORES_")){
+                        String numero = contenido.substring(contenido.lastIndexOf("_") + 1);
+                        System.out.println(getLocalName() + "Número objetivo: " + numero);
+                        // myAgent.addBehaviour(new SiguienteComportamiento());
+
+                    }else{
+                        block();
+                    }
+                    
+                }
+        }
     }
+
+
+
+    }
+}
