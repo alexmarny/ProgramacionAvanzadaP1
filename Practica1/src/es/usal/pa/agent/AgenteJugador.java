@@ -3,6 +3,7 @@ package es.usal.pa.agent;
 import java.util.ArrayList;
 
 import es.usal.pa.cifras.controlador.CallableSolucionTeclado;
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
@@ -126,6 +127,7 @@ public class AgenteJugador extends Agent {
             return 0;
         }
     }
+
     private class EsperarInicioDeRonda extends Behaviour {
 
         private boolean done = false;
@@ -158,21 +160,61 @@ public class AgenteJugador extends Agent {
 
     
 
-    private class RondaCifras extends CyclicBehaviour {
+    private class RondaCifras extends Behaviour {
 
         @Override
         public void action(){
+            CallableSolucionTeclado solucionJugador = new CallableSolucionTeclado(numeros, objetivo);
+            //comprobar interrupcion por tiempo
+            ACLMessage solucion = new ACLMessage(ACLMessage.INFORM);
+            solucion.setContent("JUGADOR_SOLUCION_DAVID" + solucionJugador);
+            solucion.addReceiver(new AID("David", AID.ISLOCALNAME));
+            send(solucion);    
+
             ACLMessage msg = myAgent.receive();
             if(msg != null){
                 String contenido = msg.getContent();
                 if (!contenido.startsWith("DAVID_FINALIZAR_CIFRAS")){
-                    CallableSolucionTeclado solucionTeclado = new CallableSolucionTeclado(numeros, objetivo);
+                    CallableSolucionTeclado solucionJugador = new CallableSolucionTeclado(numeros, objetivo);
+                    //comprobar interrupcion por tiempo
+                    ACLMessage solucion = new ACLMessage(ACLMessage.INFORM);
+                    solucion.setContent("JUGADOR_SOLUCION_DAVID" + solucionJugador);
+                    solucion.addReceiver(new AID("David", AID.ISLOCALNAME));
+                    send(solucion);
+
 
 
 
                     // myAgent.addBehaviour(new SiguienteComportamiento());
                 }else {block ();}
             }
+        }
+    }
+
+    private class RondaCifras extends Behaviour {
+
+        private boolean done = false;
+
+        @Override
+        public void action() {
+            ACLMessage msg = myAgent.receive();
+            if (msg != null) {
+                if (msg.getContent().startsWith("DAVID_FINALIZAR_CIFRAS")) {
+                    objetivo = Integer.parseInt(msg.getContent().substring(msg.getContent().lastIndexOf("_") + 1));
+                    System.out.println(getLocalName() + " -> Objetivo recibido: " + objetivo);
+                    done = true;
+                }
+            } else block();
+        }
+
+        @Override
+        public boolean done() { return done; }
+
+        @Override
+        public int onEnd() {
+            System.out.println(getLocalName() + " -> Esperando inicio de ronda...");
+            myAgent.addBehaviour(new EsperarInicioDeRonda());
+            return 0;
         }
     }
 
