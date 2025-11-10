@@ -45,7 +45,7 @@ public class expertoDavid extends Agent {
 
 		@Override
         public void action() {
-            MessageTemplate mt = MessageTemplate.MatchContent("AITOR_INICIO_RONDA");
+            MessageTemplate mt = MessageTemplate.MatchContent("AITOR_TURNO_DAVID_JUGADORES");
             ACLMessage msg = myAgent.receive(mt);
 
             if (msg != null) {
@@ -71,10 +71,6 @@ public class expertoDavid extends Agent {
 
             // 1. Números disponibles (puedes cambiarlos)
             int[] numeros = {1, 3, 5, 25, 50, 75};
-			/*Generación aleatoria de números con sus respectivos resultados con la ayuda de la clase AuxOperacion
-            * List<Integer> numeros=new ArrayList<Integer>();
-            * numeros = AuxProblema.calcularListaNumeros (6);
-            */
 
             for (int n : numeros) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -86,12 +82,9 @@ public class expertoDavid extends Agent {
             }
 
             // 2. Enviar número objetivo
-            int objetivo = 347; // puedes randomizar si quieres
-			/* Generación número objetivo con la clase AuxProblema
-             * int objetivo = AuxProblema.calcularResultado(20, 800);
-             */
+            int objetivo = 347;
             ACLMessage obj = new ACLMessage(ACLMessage.INFORM);
-            obj.setContent("DAVID_VALOR_BUSCADO_" + objetivo);
+            obj.setContent("DAVID_VALOR_BUSCADO_JUGADORES_" + objetivo);
             for (String j : jugadores) obj.addReceiver(new AID(j, AID.ISLOCALNAME));
             send(obj);
 
@@ -148,4 +141,3 @@ public class expertoDavid extends Agent {
         }
     }
 }
-

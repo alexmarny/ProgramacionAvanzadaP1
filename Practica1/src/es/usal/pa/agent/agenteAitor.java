@@ -61,7 +61,7 @@ public class agenteAitor extends Agent {
 		    if (counter == 0) {
 		        // Cuando llega a 0, avisamos al experto y jugadores
 		        ACLMessage inicio = new ACLMessage(ACLMessage.INFORM);
-		        inicio.setContent("AITOR_INICIO_RONDA");
+		        inicio.setContent("AITOR_TURNO_DAVID_JUGADORES");
 		        inicio.addReceiver(new AID("David", AID.ISLOCALNAME));
 		        for (String jugador : jugadores) {
 		            inicio.addReceiver(new AID(jugador, AID.ISLOCALNAME));
