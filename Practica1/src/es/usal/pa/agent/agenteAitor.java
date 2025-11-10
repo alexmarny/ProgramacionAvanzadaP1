@@ -5,6 +5,7 @@ import jade.lang.acl.MessageTemplate;
 import jade.core.AID;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 
 
 
@@ -25,9 +26,11 @@ public class agenteAitor extends Agent {
         Object[] args = getArguments();
         if (args != null && args.length > 0) {
             jugadores = new String[args.length];
+            System.out.print("Jugadores registrados: ");
             for (int i = 0; i < args.length; i++) {
                 jugadores[i] = (String) args[i];
-            }
+                System.out.print(jugadores[i] + " ");
+            } 
         } else {
             System.out.println("No se han indicado jugadores. Ejemplo ejecución:");
             System.out.println("jade.Boot -gui Aitor:AitorAgent(j1,j2,j3)");
@@ -35,77 +38,60 @@ public class agenteAitor extends Agent {
             return;
         }
 
-        addBehaviour(new CuentaAtrasBehaviour());
+        System.out.println("");
+        addBehaviour(new CuentaAtrasBehaviour(this, 1000)); // cada 1000 ms (1 s)
     }
 
-    private class CuentaAtrasBehaviour extends Behaviour {
-        /**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-		private boolean finished = false;
+    private class CuentaAtrasBehaviour extends TickerBehaviour {
 
+        private static final long serialVersionUID = 1L;
+
+        public CuentaAtrasBehaviour(Agent a, long period) {
+            super(a, period);
+        }
         @Override
-		public void action() {
+        protected void onTick() {
+            // Enviar mensaje de cuenta atrás a los jugadores
+            for (String jugador : jugadores) {
+                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                msg.setContent("AITOR_TIEMPO_JUGADORES:" + counter);
+                msg.addReceiver(new AID(jugador, AID.ISLOCALNAME));
+                send(msg);
+            }
 
-		    // Se envía mensaje a los jugadores con el valor actual
-		    for (String jugador : jugadores) {
-		        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-		        msg.setContent("AITOR_CUENTA_" + counter);
-		        msg.addReceiver(new AID(jugador, AID.ISLOCALNAME));
-		        send(msg);
-		    }
+            System.out.println("Cuenta atrás: " + counter);
 
-		    System.out.println("Cuenta atrás: " + counter);
+            if (counter == 0) {
+                // Enviar mensaje a David y jugadores para iniciar ronda
+                ACLMessage inicio = new ACLMessage(ACLMessage.INFORM);
+                inicio.setContent("AITOR_TURNO_DAVID_JUGADORES");
+                inicio.addReceiver(new AID("expertoDavid", AID.ISLOCALNAME)); // nombre exacto
+                for (String jugador : jugadores) {
+                    inicio.addReceiver(new AID(jugador, AID.ISLOCALNAME));
+                }
+                send(inicio);
 
-		    if (counter == 0) {
-		        // Cuando llega a 0, avisamos al experto y jugadores
-		        ACLMessage inicio = new ACLMessage(ACLMessage.INFORM);
-		        inicio.setContent("AITOR_TURNO_DAVID_JUGADORES");
-		        inicio.addReceiver(new AID("David", AID.ISLOCALNAME));
-		        for (String jugador : jugadores) {
-		            inicio.addReceiver(new AID(jugador, AID.ISLOCALNAME));
-		        }
+                System.out.println("Mensaje de turno enviado a David y jugadores.");
 
-		        send(inicio);
-
-		        // Esperamos respuesta del experto
-		        myAgent.addBehaviour(new EsperarGanadoresBehaviour());
-
-		        // Terminamos este comportamiento
-		        finished = true;
-		    } else {
-		        // esperamos 1 segundo antes del siguiente tick
-		        block(1000);
-		        counter--;
-		    }
-		}
-
-
-        @Override
-        public boolean done() {
-            return finished;
+                // Detener la cuenta atrás
+                stop();
+            } else {
+                counter--;
+            }
         }
     }
 
     private class EsperarGanadoresBehaviour extends CyclicBehaviour {
-        /**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
 
-		@Override
+        @Override
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchConversationId("GANADORES");
             ACLMessage mensaje = receive(mt);
 
             if (mensaje != null) {
                 System.out.println("Ganadores recibidos desde David: " + mensaje.getContent());
-
                 // Reiniciar cuenta atrás
-                counter = 15;
-                myAgent.addBehaviour(new CuentaAtrasBehaviour());
-                myAgent.removeBehaviour(this);
+                addBehaviour(new CuentaAtrasBehaviour(myAgent, 1000));
             } else {
                 block();
             }

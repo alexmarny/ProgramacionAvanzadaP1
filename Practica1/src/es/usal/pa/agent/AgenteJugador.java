@@ -75,7 +75,7 @@ public class AgenteJugador extends Agent {
                 String contenido = msg.getContent();
 
                 if (contenido.startsWith("AITOR_TIEMPO_JUGADORES")) {
-                    String tiempo = contenido.substring(contenido.lastIndexOf("_") + 1);
+                    String tiempo = contenido.substring(contenido.lastIndexOf("S") + 1);
                     System.out.println(getLocalName() + " -> Tiempo restante: " + tiempo);
 
                     // Si llega a 0, pasamos a esperar el mensaje del turno
@@ -248,13 +248,24 @@ public class AgenteJugador extends Agent {
 
         @Override
         public boolean done() { return done; }
-    }
-
+        
         @Override
         public int onEnd() {
-            // TODO: Replace with the actual next behavior for the game logic
-            // myAgent.addBehaviour(new SiguienteComportamiento());
-            System.out.println(getLocalName() + " -> EsperarInicioDeRonda finalizado. (Falta añadir el siguiente comportamiento)");
+            System.out.println(getLocalName() + " -> Inicio de ronda completado. Comenzando cálculo...");
+            
+            myAgent.addBehaviour(new ResolverJuego());
+            
             return 0;
         }
+        private class ResolverJuego extends Behaviour {
+            @Override
+            public void action() {
+                System.out.println(getLocalName() + " -> Aquí resolvería la cuenta con los números recibidos.");
+                // TODO: implementar lógica
+            }
+
+            @Override
+            public boolean done() { return true; }
+        }
     }
+}
