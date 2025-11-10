@@ -7,8 +7,6 @@ import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.WakerBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import jade.util.leap.Iterator;
-
 import java.util.*;
 
 public class expertoDavid extends Agent {
