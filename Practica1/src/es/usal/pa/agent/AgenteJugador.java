@@ -90,6 +90,7 @@ public class AgenteJugador extends Agent {
 		@Override
 		public boolean done() {return numeros.size() == 6;}
 		
+        @Override
 		public int onEnd() {
             System.out.println(getLocalName() + " -> Se recibieron los 6 números.");
             myAgent.addBehaviour(new EsperarObjetivoDeDavid());
