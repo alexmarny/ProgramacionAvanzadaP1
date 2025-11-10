@@ -1,6 +1,8 @@
 package es.usal.pa.agent;
 
 import java.util.ArrayList;
+
+import es.usal.pa.cifras.controlador.CallableSolucionTeclado;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
@@ -154,26 +156,23 @@ public class AgenteJugador extends Agent {
         //hilar los comportamientos
     
 
-    private class MostrarNumeros extends CyclicBehaviour {
+    
+
+    private class RondaCifras extends CyclicBehaviour {
 
         @Override
         public void action(){
             ACLMessage msg = myAgent.receive();
-                if(msg != null){
-                    String contenido = msg.getContent();
-                    if (contenido.startsWith("DAVID_NUMERO_")){
-                        String numero = contenido.substring(contenido.lastIndexOf("_") + 1);
-                        System.out.println(getLocalName() + numero); //Convendría añadir un mensaje de "estos son los numeros" pero no sé cómo
-                    }else if (contenido.startsWith("DAVID_VALOR_BUSCADO_JUGADORES_")){
-                        String numero = contenido.substring(contenido.lastIndexOf("_") + 1);
-                        System.out.println(getLocalName() + "Número objetivo: " + numero);
-                        // myAgent.addBehaviour(new SiguienteComportamiento());
+            if(msg != null){
+                String contenido = msg.getContent();
+                if (!contenido.startsWith("DAVID_FINALIZAR_CIFRAS")){
+                    CallableSolucionTeclado solucionTeclado = new CallableSolucionTeclado(numeros, objetivo);
 
-                    }else{
-                        block();
-                    }
-                    
-                }
+
+
+                    // myAgent.addBehaviour(new SiguienteComportamiento());
+                }else {block ();}
+            }
         }
     }
 
