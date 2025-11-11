@@ -1,18 +1,6 @@
 package es.usal.pa.agent;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import es.usal.pa.cifras.controlador.AuxSolucion;
-import es.usal.pa.cifras.controlador.CallableSolucionTeclado;
-import es.usal.pa.cifras.modelo.Solucion;
-import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
@@ -40,7 +28,7 @@ public class AgenteJugador extends Agent {
                 String contenido = msg.getContent();
 
                 if (contenido.startsWith("AITOR_TIEMPO_JUGADORES")) {
-                    String tiempo = contenido.substring(contenido.lastIndexOf("_") + 1);
+                    String tiempo = contenido.substring(contenido.lastIndexOf(":") + 1);
                     System.out.println(getLocalName() + " -> Tiempo restante: " + tiempo);
 
                     // Si llega a 0, pasamos a esperar el mensaje del turno
@@ -86,7 +74,7 @@ public class AgenteJugador extends Agent {
             if (msg != null) {
                 String contenido = msg.getContent();
 
-                if (contenido.startsWith("DAVID_NUMERO_JUGADORES_")) { //este mensaje está bien?
+                if (contenido.startsWith("DAVID_NUMERO_JUGADORES_")) {
                     String valor = contenido.substring(contenido.lastIndexOf("_") + 1);
                     try {
                         int numero = Integer.parseInt(valor);
@@ -136,7 +124,6 @@ public class AgenteJugador extends Agent {
             return 0;
         }
     }
-
     private class EsperarInicioDeRonda extends Behaviour {
 
         private boolean done = false;
@@ -154,20 +141,26 @@ public class AgenteJugador extends Agent {
 
         @Override
         public boolean done() { return done; }
-    }
-
+        
         @Override
         public int onEnd() {
-            // TODO: Replace with the actual next behavior for the game logic
-            // myAgent.addBehaviour(new SiguienteComportamiento());
-            System.out.println(getLocalName() + " -> EsperarInicioDeRonda finalizado. (Falta añadir el siguiente comportamiento)");
+            System.out.println(getLocalName() + " -> Inicio de ronda completado. Comenzando cálculo...");
+            
+            myAgent.addBehaviour(new ResolverJuego());
+            
             return 0;
         }
+        private class ResolverJuego extends Behaviour {
+            @Override
+            public void action() {
+                System.out.println(getLocalName() + " -> Aquí resolvería la cuenta con los números recibidos.");
+                // TODO: implementar lógica
+            }
 
-        //hilar los comportamientos
-    
-
-    
+            @Override
+            public boolean done() { return true; }
+        }
+    }
 
     private class RondaCifras extends Behaviour {
 
@@ -291,13 +284,5 @@ public class AgenteJugador extends Agent {
             // myAgent.addBehaviour(new SiguienteComportamiento());
             return 0;
         }
-    }
-
-
-    }
-
-   
-
-
     }
 }
