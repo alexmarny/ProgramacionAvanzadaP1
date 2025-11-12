@@ -71,8 +71,9 @@ public class agenteAitor extends Agent {
                 send(inicio);
 
                 System.out.println("Mensaje de turno enviado a David y jugadores.");
-
-                // Detener la cuenta atrás
+                
+                myAgent.addBehaviour(new EsperarGanadoresBehaviour());
+                // Detener ticker
                 stop();
             } else {
                 counter--;
@@ -82,7 +83,12 @@ public class agenteAitor extends Agent {
 
     private class EsperarGanadoresBehaviour extends CyclicBehaviour {
 
-        @Override
+        /**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		@Override
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchConversationId("GANADORES");
             ACLMessage mensaje = receive(mt);
@@ -93,10 +99,11 @@ public class agenteAitor extends Agent {
                 // Reiniciar cuenta atrás
                 counter = 15;
                 addBehaviour(new CuentaAtrasBehaviour(myAgent, 1000)); // reinicia la cuenta atrás
+                myAgent.removeBehaviour(this);
             } else {
                 block();
             }
-        }
+        } 
     }
 
 }
