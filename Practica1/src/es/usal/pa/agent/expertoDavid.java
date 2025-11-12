@@ -93,13 +93,13 @@ public class expertoDavid extends Agent {
             // 2.2 Agregar comportamiento para recibir resultados mientras la ronda está activa
             myAgent.addBehaviour(new RecogerResultadosBehaviour(jugadores, resultados));
 
-            // 2.3 Agregar un WakerBehaviour que se activará después de 40 segundos para finalizar la ronda
-            myAgent.addBehaviour(new WakerBehaviour(myAgent, 40000) {
+            // 2.3 Agregar un WakerBehaviour que se activará después de 45 segundos para finalizar la ronda
+            myAgent.addBehaviour(new WakerBehaviour(myAgent, 45000) {
                 @Override
                 protected void onWake() {
                     sendFinRonda();
                     myAgent.addBehaviour(new AnalizarGanadoresBehaviour(jugadores, resultados, numeroBuscado));
-                    System.out.println("Ronda finalizada. Esperando siguiente turno de Aitor...");
+                    System.out.println("Ronda finalizada...");
                     myAgent.removeBehaviour(this);
                     }
             });
@@ -214,7 +214,6 @@ public class expertoDavid extends Agent {
 
             for (String r : resultados) {
                 String[] partes = r.split(":");
-                String nombre = partes[0];
                 int valor = Integer.parseInt(partes[1]);
 
                 int diferencia = Math.abs(valor - numeroBuscado);
@@ -228,7 +227,7 @@ public class expertoDavid extends Agent {
                 }
             }
 
-            // ✅ Enviar mensajes de ganadores
+            // Enviar mensajes de ganadores
             for (String g : ganadores) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
                 msg.setContent("GANADOR_" + g); // ej: GANADOR_Jugador1:347
@@ -240,6 +239,12 @@ public class expertoDavid extends Agent {
 
                 send(msg);
             }
+            
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("DAVID_FINALIZAR_CIFRAS_JUGADORES");
+            for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+            msg.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
+            
         }
 
         private void enviarAvisoSinGanadores() {
