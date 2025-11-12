@@ -3,9 +3,10 @@ package es.usal.pa.agent;
 import jade.core.Agent;
 import jade.core.AID;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.WakerBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-
 import java.util.*;
 
 public class expertoDavid extends Agent {
@@ -14,23 +15,11 @@ public class expertoDavid extends Agent {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private String[] jugadores;
+	 List<String> jugadores = new ArrayList<>();
 
     @Override
     protected void setup() {
         System.out.println(getLocalName() + " iniciado.");
-
-        // Se reciben nombres de jugadores como argumentos
-        Object[] args = getArguments();
-        if (args != null && args.length > 0) {
-            jugadores = new String[args.length];
-            for (int i = 0; i < args.length; i++)
-                jugadores[i] = (String) args[i];
-        } else {
-            System.out.println("ERROR: No se han indicado jugadores.");
-            doDelete();
-            return;
-        }
 
         addBehaviour(new EsperarRonda());
     }
@@ -45,99 +34,223 @@ public class expertoDavid extends Agent {
 
 		@Override
         public void action() {
-            MessageTemplate mt = MessageTemplate.MatchContent("AITOR_TURNO_DAVID_JUGADORES");
-            ACLMessage msg = myAgent.receive(mt);
+			
+			MessageTemplate mt = MessageTemplate.MatchContent("AITOR_TURNO_DAVID_JUGADORES");
+			ACLMessage msg = receive(mt);
+			
+
+			if (msg != null) {
+
+			    jugadores.clear();
+			    jade.util.leap.Iterator it = msg.getAllReceiver();
+
+			    while (it.hasNext()) {
+			        AID aid = (AID) it.next();
+			        if (!aid.getLocalName().equals(myAgent.getLocalName())) {
+			            jugadores.add(aid.getLocalName());
+			        }
+			    }
+
+	                System.out.println("Turno recibido de Aitor. Lista de jugadores:");
+	                for (String j : jugadores) {
+	                    System.out.println(" - " + j);
+	                }
+	                
+	                myAgent.addBehaviour(new RondaCifras(jugadores));
+	                myAgent.removeBehaviour(this);
+	        } else {
+	            block(); 
+	        }
+	    }
+	}
+
+            
+
+    // ---------------------- RONDA DE CIFRAS ------------------------
+    private class RondaCifras extends OneShotBehaviour {
+    	/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		private List<String> jugadores;
+        private int[] numeros = {1, 3, 5, 25, 50, 75};
+        private int numeroBuscado = 347;
+        private List<String> resultados = new ArrayList<>();
+
+        public RondaCifras(List<String> jugadores) {
+            this.jugadores = jugadores;
+        }
+
+        @Override
+        public void action() {
+        	
+        	System.out.println(getLocalName() + " → INICIANDO RONDA DE CIFRAS");
+            // 2.1 Enviar los números y número buscado
+            sendNumeros();
+            sendNumeroBuscado();
+            sendInicioRonda();
+
+            // 2.2 Agregar comportamiento para recibir resultados mientras la ronda está activa
+            myAgent.addBehaviour(new RecogerResultadosBehaviour(jugadores, resultados));
+
+            // 2.3 Agregar un WakerBehaviour que se activará después de 40 segundos para finalizar la ronda
+            myAgent.addBehaviour(new WakerBehaviour(myAgent, 40000) {
+                @Override
+                protected void onWake() {
+                    sendFinRonda();
+                    myAgent.addBehaviour(new AnalizarGanadoresBehaviour(jugadores, resultados, numeroBuscado));
+                    System.out.println("Ronda finalizada. Esperando siguiente turno de Aitor...");
+                    myAgent.removeBehaviour(this);
+                    }
+            });
+        }
+
+        // Métodos auxiliares
+        private void sendNumeros() {
+            for (int n : numeros) {
+                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                msg.setContent("DAVID_NUMERO_JUGADORES_" + n);
+                for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+                send(msg);
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            }
+        }
+
+        private void sendNumeroBuscado() {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("DAVID_VALOR_BUSCADO_JUGADORES_" + numeroBuscado);
+            for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+            send(msg);
+        }
+
+        private void sendInicioRonda() {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("DAVID_EMPEZAR_CIFRAS_JUGADORES");
+            for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+            send(msg);
+        }
+
+        private void sendFinRonda() {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("DAVID_FINALIZAR_CIFRAS_JUGADORES");
+            for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+            send(msg);
+        }
+
+    }
+
+    private class RecogerResultadosBehaviour extends CyclicBehaviour {
+
+        private static final long serialVersionUID = 1L;
+        private List<String> jugadores;
+        private List<String> resultados;
+
+        public RecogerResultadosBehaviour(List<String> jugadores, List<String> resultados) {
+            this.jugadores = jugadores;
+            this.resultados = resultados;
+        }
+
+        @Override
+        public void action() {
+            ACLMessage msg = myAgent.receive();
 
             if (msg != null) {
-                System.out.println("David: Recibido turno de Aitor. Iniciando ronda...");
 
-                myAgent.addBehaviour(new RondaCifras());
+                String contenido = msg.getContent();
+
+                // Comprobamos si es un resultado válido
+                if (contenido.startsWith("JUGADOR_SOLUCION_DAVID_")) {
+
+                    String jugador = msg.getSender().getLocalName();
+
+                    if (jugadores.contains(jugador)) {
+                        String solucion = contenido.substring(contenido.lastIndexOf("_") + 1);
+
+                        System.out.println(getLocalName() + 
+                            " → Recibida solución de " + jugador + ": " + solucion);
+
+                        resultados.add(jugador + ":" + solucion);
+                    }
+                }
+
+                if (resultados.size() == jugadores.size()) {
+                    System.out.println(getLocalName() + " → Se han recibido todas las soluciones.");
+                    myAgent.removeBehaviour(this);
+                }
+
             } else {
                 block();
             }
         }
     }
-
-    // ---------------------- RONDA DE CIFRAS ------------------------
-    private class RondaCifras extends CyclicBehaviour {
+    
+    private class AnalizarGanadoresBehaviour extends OneShotBehaviour {
 
         /**
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
+		private List<String> jugadores;
+        private List<String> resultados;
+        private int numeroBuscado;
 
-		@Override
+        public AnalizarGanadoresBehaviour(List<String> jugadores, List<String> resultados, int numeroBuscado) {
+            this.jugadores = jugadores;
+            this.resultados = resultados;
+            this.numeroBuscado = numeroBuscado;
+        }
+
+        @Override
         public void action() {
 
-            // 1. Números disponibles (puedes cambiarlos)
-            int[] numeros = {1, 3, 5, 25, 50, 75};
-
-            for (int n : numeros) {
-                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.setContent("DAVID_NUMERO_" + n);
-                for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
-                send(msg);
-
-                try { Thread.sleep(100); } catch (Exception ignored) {}
+            if (resultados.isEmpty()) {
+                enviarAvisoSinGanadores();
+                return;
             }
 
-            // 2. Enviar número objetivo
-            int objetivo = 347;
-            ACLMessage obj = new ACLMessage(ACLMessage.INFORM);
-            obj.setContent("DAVID_VALOR_BUSCADO_JUGADORES_" + objetivo);
-            for (String j : jugadores) obj.addReceiver(new AID(j, AID.ISLOCALNAME));
-            send(obj);
-
-            // 3. Enviar mensaje de inicio
-            ACLMessage start = new ACLMessage(ACLMessage.INFORM);
-            start.setContent("DAVID_EMPEZAR_CIFRAS");
-            for (String j : jugadores) start.addReceiver(new AID(j, AID.ISLOCALNAME));
-            send(start);
-
-            // 4. Esperar 40 segundos
-            try { Thread.sleep(40000); } catch (Exception ignored) {}
-
-            // 5. Avisar final de ronda
-            ACLMessage fin = new ACLMessage(ACLMessage.INFORM);
-            fin.setContent("DAVID_FINALIZAR_CIFRAS");
-            for (String j : jugadores) fin.addReceiver(new AID(j, AID.ISLOCALNAME));
-            send(fin);
-
-            // 6. Leer mensajes de resultados
-            List<String> resultados = new ArrayList<>();
-            ACLMessage m;
-            do {
-                m = myAgent.receive();
-                if (m != null && "RESULTADO".equals(m.getConversationId()))
-                    resultados.add(m.getSender().getLocalName() + ":" + m.getContent());
-            } while (m != null);
-
-            // 7. Buscar ganador(es)
+            // Cada entrada es "nombre:solucion"
+            int mejorDiferencia = Integer.MAX_VALUE;
             List<String> ganadores = new ArrayList<>();
 
-            ganadores.addAll(resultados);
+            for (String r : resultados) {
+                String[] partes = r.split(":");
+                String nombre = partes[0];
+                int valor = Integer.parseInt(partes[1]);
 
-            // 8. Enviar ganadores a todos y Aitor
-            if (ganadores.isEmpty()) {
-                ACLMessage noWinner = new ACLMessage(ACLMessage.INFORM);
-                noWinner.setContent("DAVID_SIN_GANADORES");
-                noWinner.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
-                for (String j : jugadores) noWinner.addReceiver(new AID(j, AID.ISLOCALNAME));
-                send(noWinner);
+                int diferencia = Math.abs(valor - numeroBuscado);
 
-            } else {
-                for (String g : ganadores) {
-                    ACLMessage winner = new ACLMessage(ACLMessage.INFORM);
-                    winner.setContent("DAVID_GANADOR_" + g);
-                    winner.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
-                    for (String j : jugadores) winner.addReceiver(new AID(j, AID.ISLOCALNAME));
-                    send(winner);
+                if (diferencia < mejorDiferencia) {
+                    mejorDiferencia = diferencia;
+                    ganadores.clear();
+                    ganadores.add(r);
+                } else if (diferencia == mejorDiferencia) {
+                    ganadores.add(r);
                 }
             }
 
-            // 9. Volver a esperar la siguiente ronda
-            myAgent.addBehaviour(new EsperarRonda());
-            myAgent.removeBehaviour(this);
+            // ✅ Enviar mensajes de ganadores
+            for (String g : ganadores) {
+                ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                msg.setContent("GANADOR_" + g); // ej: GANADOR_Jugador1:347
+
+                // enviamos a todos los jugadores
+                for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+                // y a Aitor
+                msg.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
+
+                send(msg);
+            }
+        }
+
+        private void enviarAvisoSinGanadores() {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent("SIN_GANADORES");
+
+            for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
+            msg.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
+
+            send(msg);
         }
     }
 }
+
