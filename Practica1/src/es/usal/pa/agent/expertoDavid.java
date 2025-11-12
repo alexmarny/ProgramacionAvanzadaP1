@@ -9,7 +9,7 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import java.util.*;
 
-public class expertoDavid extends Agent {
+public class ExpertoDavid extends Agent {
 
     /**
 	 * 
@@ -205,7 +205,8 @@ public class expertoDavid extends Agent {
 
             if (resultados.isEmpty()) {
                 enviarAvisoSinGanadores();
-                return;
+                myAgent.addBehaviour(new EsperarRonda());
+                myAgent.removeBehaviour(this);
             }
 
             // Cada entrada es "nombre:solucion"
@@ -230,7 +231,7 @@ public class expertoDavid extends Agent {
             // Enviar mensajes de ganadores
             for (String g : ganadores) {
                 ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-                msg.setContent("GANADOR_" + g); // ej: GANADOR_Jugador1:347
+                msg.setContent("DAVID_GANADOR_JUGADORES_AITOR_" + g); // ej: GANADOR_Jugador1:347
 
                 // enviamos a todos los jugadores
                 for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
@@ -244,6 +245,9 @@ public class expertoDavid extends Agent {
             msg.setContent("DAVID_FINALIZAR_CIFRAS_JUGADORES");
             for (String j : jugadores) msg.addReceiver(new AID(j, AID.ISLOCALNAME));
             msg.addReceiver(new AID("Aitor", AID.ISLOCALNAME));
+            
+            myAgent.addBehaviour(new EsperarRonda());
+            myAgent.removeBehaviour(this);
             
         }
 

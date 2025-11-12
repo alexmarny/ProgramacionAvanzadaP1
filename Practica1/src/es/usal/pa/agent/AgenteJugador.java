@@ -45,7 +45,6 @@ public class AgenteJugador extends Agent {
 
                     // Si llega a 0, pasamos a esperar el mensaje del turno
                     if (tiempo.equals("0")) {
-                        System.out.println(getLocalName() + " -> Fin cuenta atrás. Esperando turno de David...");
                         myAgent.addBehaviour(new EsperarCifrasDeDavid());
                         myAgent.removeBehaviour(this);
                     }
@@ -66,8 +65,8 @@ public class AgenteJugador extends Agent {
             	
             	String contenido = msg.getContent();
                 if (contenido.equals("AITOR_TURNO_DAVID_JUGADORES")) {
-                System.out.println(getLocalName() + " -> mensaje recibido, comienza ronda de cifras: " + msg.getContent());
                 addBehaviour(new RecibirCifras());
+                System.out.print("Cifras: ");
                 removeBehaviour(this);
             } else {
                 block();
@@ -78,9 +77,10 @@ public class AgenteJugador extends Agent {
 
 
     private class RecibirCifras extends Behaviour {
-
+    	
         @Override
         public void action() {
+            
             ACLMessage msg = myAgent.receive();
 
             if (msg != null) {
@@ -91,12 +91,12 @@ public class AgenteJugador extends Agent {
                     try {
                         int numero = Integer.parseInt(valor);
                         numeros.add(numero);
-                        System.out.println(getLocalName() + " -> Recibido número: " + numero + " (" + numeros.size() + "/6)");
+                        System.out.print(numero + " ");
                     } catch (NumberFormatException e) {
                         // Ignorar mensajes corruptos
                     }
                 }
-            }
+            } else block();
         }
 
 		@Override
@@ -104,7 +104,7 @@ public class AgenteJugador extends Agent {
 		
         @Override
 		public int onEnd() {
-            System.out.println(getLocalName() + " -> Se recibieron los 6 números.");
+            System.out.println();
             myAgent.addBehaviour(new EsperarObjetivoDeDavid());
             return 0;
         }
@@ -206,7 +206,7 @@ public class AgenteJugador extends Agent {
                 ACLMessage solMsg = new ACLMessage(ACLMessage.INFORM);
                 solMsg.addReceiver(new AID("expertoDavid", AID.ISLOCALNAME));
                 solMsg.setConversationId("SOLUCION_CIFRAS");
-                solMsg.setContent("JUGADOR_SOLUCION_DAVID:" + AuxSolucion.cadenaOperaciones(solucion));
+                solMsg.setContent("JUGADOR_SOLUCION_DAVID_" + AuxSolucion.cadenaOperaciones(solucion));
                 send(solMsg);
 
                 System.out.println(getLocalName() + " → Solución enviada a expertoDavid.");
