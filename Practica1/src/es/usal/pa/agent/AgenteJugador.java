@@ -1,10 +1,22 @@
 package es.usal.pa.agent;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import es.usal.pa.cifras.controlador.AuxSolucion;
+import es.usal.pa.cifras.controlador.CallableSolucionTeclado;
+import es.usal.pa.cifras.modelo.Solucion;
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 @SuppressWarnings("serial")
 public class AgenteJugador extends Agent {
@@ -146,143 +158,120 @@ public class AgenteJugador extends Agent {
         public int onEnd() {
             System.out.println(getLocalName() + " -> Inicio de ronda completado. Comenzando cálculo...");
             
-            myAgent.addBehaviour(new ResolverJuego());
+            myAgent.addBehaviour(new RondaCifras());
             
             return 0;
-        }
-        private class ResolverJuego extends Behaviour {
-            @Override
-            public void action() {
-                System.out.println(getLocalName() + " -> Aquí resolvería la cuenta con los números recibidos.");
-                // TODO: implementar lógica
-            }
-
-            @Override
-            public boolean done() { return true; }
         }
     }
 
     private class RondaCifras extends Behaviour {
 
-        @Override
-        public void action(){
-            CallableSolucionTeclado callableSolucionTeclado=new CallableSolucionTeclado(numeros, objetivo);
-            FutureTask<Solucion> task = new FutureTask<Solucion> (callableSolucionTeclado);
-            ExecutorService executorService = Executors.newSingleThreadExecutor ();
-            executorService.submit(task);
-            ACLMessage solMsg = new ACLMessage(ACLMessage.INFORM);
-		    
-            
-            Solucion solucion=null;
-            try
-            {
-                //dejo como máximo 45 segundos para introducir operaciones
-                solucion = task.get(45, TimeUnit.SECONDS);
-                
-                //cuando no salta el timeout
-                System.out.println("Solución registrada");
-                System.out.println(AuxSolucion.cadenaOperaciones(solucion));
-                solMsg.setContent("JUGADOR_SOLUCION_DAVID" + solucion);
-		        solMsg.addReceiver(new AID("David", AID.ISLOCALNAME));
-                send(solMsg);
-
-                
-            } catch (InterruptedException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (ExecutionException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (TimeoutException e)
-            {
-                // TODO Auto-generated catch block
-                //e.printStackTrace();
-                
-                //https://www.geekyhacker.com/callable-with-the-timeout-in-java-executorservice/
-                //añadir comprobación en el hilo para salirse
-                //if(Thread.currentThread().isInterrupted()) return;
-                task.cancel(true);
-            }
-            
-            //implementar que cierre cuando se reciba el mensaje de "DAVID_FINALIZAR_CIFRAS"
-            executorService.shutdown();
-            try
-            {
-                executorService.awaitTermination(500, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            
-            if(!executorService.isTerminated())
-                executorService.shutdownNow();		
-            
-            if(!executorService.isShutdown())
-                executorService.shutdownNow();
-            
-            
-            //cuando salta el timeout me quedo por donde iba
-            if(task.isCancelled())
-            {
-                solucion=callableSolucionTeclado.getMejorResultadoCalculado();
-                
-                System.out.println("Solución timeout");
-                System.out.println(AuxSolucion.cadenaOperaciones(solucion));
-                solMsg.setContent("JUGADOR_SOLUCION_DAVID" + solucion);
-		        solMsg.addReceiver(new AID("David", AID.ISLOCALNAME));
-                send(solMsg);
-            }
-            // myAgent.addBehaviour(new SiguienteComportamiento());
-	    }
-    }
-
-    private class EsperarGanadoresDavid extends CyclicBehaviour {
+        private static final long serialVersionUID = 1L;
+        private boolean done = false;
 
         @Override
         public void action() {
-            ACLMessage msg = myAgent.receive();
-            if (msg != null) {
-            	String contenido = msg.getContent();
-                if (contenido.equals("DAVID_SIN_GANADORES")) {
-                    System.out.println("No ha habido ganadores en esta partida.");
-                } else if (contenido.startsWith()){
-                    String ganador = contenido.substring(contenido.lastIndexOf("_") + 1);
-                    System.out.println("Ganador de la partida:" + ganador);
-                } else { block ();}
-                // myAgent.addBehaviour(new SiguienteComportamiento());
+            // Crear el callable que gestionará la entrada de operaciones del jugador
+            CallableSolucionTeclado callableSolucionTeclado = new CallableSolucionTeclado(numeros, objetivo);
+            FutureTask<Solucion> task = new FutureTask<>(callableSolucionTeclado);
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(task);
+
+            Solucion solucion = null;
+
+            try {
+                // Esperar hasta 45 segundos a que el jugador introduzca operaciones
+                solucion = task.get(45, TimeUnit.SECONDS);
+                System.out.println(getLocalName() + " → Solución registrada dentro del tiempo.");
+                System.out.println(AuxSolucion.cadenaOperaciones(solucion));
+
+            } catch (TimeoutException e) {
+                // Si se acaba el tiempo, cancela la tarea y usa el mejor resultado parcial
+                System.out.println(getLocalName() + " → Tiempo agotado. Enviando mejor resultado parcial...");
+                task.cancel(true);
+                solucion = callableSolucionTeclado.getMejorResultadoCalculado();
+
+            } catch (InterruptedException | ExecutionException e) {
+                System.err.println(getLocalName() + " → Error al obtener solución: " + e.getMessage());
+                e.printStackTrace();
+
+            } finally {
+                // Cerrar el executor correctamente
+                executorService.shutdownNow();
+                done = true;
             }
+
+            // Enviar el mensaje al agente experto con la solución obtenida
+            if (solucion != null) {
+                ACLMessage solMsg = new ACLMessage(ACLMessage.INFORM);
+                solMsg.addReceiver(new AID("expertoDavid", AID.ISLOCALNAME));
+                solMsg.setConversationId("SOLUCION_CIFRAS");
+                solMsg.setContent("JUGADOR_SOLUCION_DAVID:" + AuxSolucion.cadenaOperaciones(solucion));
+                send(solMsg);
+
+                System.out.println(getLocalName() + " → Solución enviada a expertoDavid.");
+            } else {
+                System.out.println(getLocalName() + " → No se generó ninguna solución válida.");
+            }
+            myAgent.addBehaviour(new RecibirGanadoresBehaviour());
+        }
+
+        @Override
+        public boolean done() {
+            return done;
         }
     }
 
-    private class RecibirGanadores extends Behaviour {
+    private class RecibirGanadoresBehaviour extends Behaviour {
+
+        private boolean done = false;
 
         @Override
         public void action() {
-            ACLMessage msg = myAgent.receive();
-            System.out.println("Ganador/es de la partida:");
+            // Solo mensajes INFORM
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+            ACLMessage msg = myAgent.receive(mt);
 
-            do {
-                msg = myAgent.receive();
+            if (msg != null) {
                 String contenido = msg.getContent();
-                if(contenido.startsWith("DAVID_GANADOR_")){
-                    String ganador = contenido.substring(contenido.lastIndexOf("_") + 1);
-                    System.out.println(ganador);
+
+                if (contenido == null) {
+                    return;
                 }
 
-            }while (msg != null)
+                // Caso: no hay ganadores
+                if (contenido.equals("DAVID_SIN_GANADORES")) {
+                    System.out.println(getLocalName() + " → No ha habido ganadores en esta partida.");
+                    done = true; // finaliza comportamiento
+                } 
+                // Caso: hay ganador
+                else if (contenido.startsWith("DAVID_GANADOR_JUGADORES_AITOR:")) {
+                    // Ejemplo: DAVID_GANADOR_JUGADORES_AITOR:Juan(347)
+                    String ganador = contenido.substring(contenido.indexOf(":") + 1);
+                    System.out.println(getLocalName() + " → Ganador de la partida: " + ganador);
+                    // No finalizamos, porque puede venir otro mensaje con otro ganador
+                } 
+                else if (contenido.equals("DAVID_FINALIZAR_CIFRAS_JUGADORES")) {
+                    // Señal de David de que no habrá más mensajes de ganadores
+                    done = true;
+                } 
+                else {
+                    // Mensaje no relevante, ignorar
+                }
+            } else {
+                block(); // esperar próximos mensajes
+            }
         }
 
-		@Override
-		public boolean done() {return done;} //no entiendo muy bien qué hay que poner aquí
-		
         @Override
-		public int onEnd() {
-            System.out.println(getLocalName() + " -> Se recibieron los ganadores.");
-            // myAgent.addBehaviour(new SiguienteComportamiento());
-            return 0;
+        public boolean done() {
+            return done;
         }
+
+        @Override
+        public int onEnd() {
+            System.out.println(getLocalName() + " → Fin recepción de ganadores.");
+            return 0;
+            }
+    	}
     }
-}
